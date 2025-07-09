@@ -1,3 +1,4 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +7,7 @@ import { CaregiverForm } from '@/components/CaregiverForm';
 import { ClientForm } from '@/components/ClientForm';
 import { ScheduleOptions } from '@/components/ScheduleOptions';
 import { SpreadsheetUpload } from '@/components/SpreadsheetUpload';
+import { CalendarView } from '@/components/CalendarView';
 import { Caregiver, Client, ScheduleOption } from '@/types/scheduler';
 import { findMatches, generateScheduleOptions } from '@/utils/scheduleMatcher';
 import { Users, UserCheck, Calendar, Sparkles } from 'lucide-react';
@@ -121,10 +123,11 @@ const Index = () => {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-3">
+          <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="caregivers">Caregivers</TabsTrigger>
             <TabsTrigger value="clients">Clients</TabsTrigger>
             <TabsTrigger value="schedule">Schedule Options</TabsTrigger>
+            <TabsTrigger value="calendar">Calendar View</TabsTrigger>
           </TabsList>
           
           <TabsContent value="caregivers" className="space-y-6">
@@ -214,6 +217,14 @@ const Index = () => {
                 </CardContent>
               </Card>
             )}
+          </TabsContent>
+
+          <TabsContent value="calendar" className="space-y-6">
+            <CalendarView 
+              scheduleOptions={scheduleOptions}
+              caregivers={caregivers}
+              clients={clients}
+            />
           </TabsContent>
         </Tabs>
       </div>
