@@ -4,7 +4,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ScheduleOption, Caregiver, Client, Match } from '@/types/scheduler';
-import { Calendar, ChevronLeft, ChevronRight, Clock, User } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight, Clock, User, Users } from 'lucide-react';
 
 interface CalendarViewProps {
   scheduleOptions: ScheduleOption[];
@@ -14,7 +14,26 @@ interface CalendarViewProps {
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 const DAY_LABELS = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
-const HOURS = Array.from({ length: 24 }, (_, i) => `${i.toString().padStart(2, '0')}:00`);
+
+// Color palette for caregivers
+const CAREGIVER_COLORS = [
+  'bg-red-500 text-white',
+  'bg-blue-500 text-white',
+  'bg-green-500 text-white',
+  'bg-yellow-500 text-black',
+  'bg-purple-500 text-white',
+  'bg-pink-500 text-white',
+  'bg-indigo-500 text-white',
+  'bg-orange-500 text-white',
+  'bg-teal-500 text-white',
+  'bg-cyan-500 text-white',
+  'bg-emerald-500 text-white',
+  'bg-lime-500 text-black',
+  'bg-amber-500 text-black',
+  'bg-rose-500 text-white',
+  'bg-violet-500 text-white',
+  'bg-sky-500 text-white',
+];
 
 export const CalendarView: React.FC<CalendarViewProps> = ({
   scheduleOptions,
@@ -26,33 +45,19 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
   const getCaregiverName = (id: string) => caregivers.find(c => c.id === id)?.name || 'Unknown';
   const getClientName = (id: string) => clients.find(c => c.id === id)?.name || 'Unknown';
 
-  const getTimeSlotPosition = (timeSlot: { start: string; end: string }) => {
-    const startHour = parseInt(timeSlot.start.split(':')[0]);
-    const startMinute = parseInt(timeSlot.start.split(':')[1]);
-    const endHour = parseInt(timeSlot.end.split(':')[0]);
-    const endMinute = parseInt(timeSlot.end.split(':')[1]);
-
-    const startPosition = (startHour + startMinute / 60) * 40; // 40px per hour
-    const duration = (endHour + endMinute / 60) - (startHour + startMinute / 60);
-    const height = duration * 40;
-
-    return { top: startPosition, height };
+  const getCaregiverColor = (caregiverId: string) => {
+    const index = caregivers.findIndex(c => c.id === caregiverId);
+    return CAREGIVER_COLORS[index % CAREGIVER_COLORS.length];
   };
 
   const getCurrentOption = () => {
     return scheduleOptions[selectedOption] || { matches: [] };
   };
 
-  const getMatchesForDay = (day: string) => {
-    return getCurrentOption().matches.filter(match => match.day === day);
-  };
-
-  const getCaregiverAvailability = (caregiverId: string, day: string) => {
-    const caregiver = caregivers.find(c => c.id === caregiverId);
-    if (!caregiver) return [];
-    
-    const daySchedule = caregiver.weeklySchedule.find(d => d.day === day);
-    return daySchedule?.slots || [];
+  const getMatchesForClient = (clientId: string, day: string) => {
+    return getCurrentOption().matches.filter(match => 
+      match.clientId === clientId && match.day === day
+    );
   };
 
   const getClientNeeds = (clientId: string, day: string) => {
@@ -63,12 +68,22 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
     return daySchedule?.slots || [];
   };
 
+  const formatTimeSlot = (slot: { start: string; end: string }) => {
+    return `${slot.start}-${slot.end}`;
+  };
+
+  const getUniqueCaregiversInOption = () => {
+    const currentOption = getCurrentOption();
+    const caregiverIds = new Set(currentOption.matches.map(match => match.caregiverId));
+    return Array.from(caregiverIds).map(id => caregivers.find(c => c.id === id)).filter(Boolean);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h2 className="text-2xl font-bold flex items-center gap-2">
           <Calendar className="w-6 h-6" />
-          Schedule Calendar View
+          Client Schedule View
         </h2>
         
         {scheduleOptions.length > 0 && (
@@ -107,140 +122,105 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
           </CardContent>
         </Card>
       ) : (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center justify-between">
-              <span>Weekly Schedule - Option {selectedOption + 1}</span>
-              <Badge variant="secondary">
-                {getCurrentOption().matches?.length || 0} matches
-              </Badge>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-8 gap-2">
-              {/* Time column */}
-              <div className="space-y-1">
-                <div className="h-8 flex items-center text-xs font-medium text-muted-foreground">
-                  Time
-                </div>
-                {HOURS.map(hour => (
-                  <div key={hour} className="h-10 flex items-center text-xs text-muted-foreground border-t">
-                    {hour}
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Caregiver Legend */}
+          <Card className="lg:col-span-4">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Users className="w-5 h-5" />
+                Caregiver Legend - Option {selectedOption + 1}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                {getUniqueCaregiversInOption().map((caregiver) => (
+                  <div key={caregiver.id} className="flex items-center gap-2">
+                    <div className={`w-4 h-4 rounded ${getCaregiverColor(caregiver.id)}`}></div>
+                    <span className="text-sm truncate">{caregiver.name}</span>
                   </div>
                 ))}
               </div>
+            </CardContent>
+          </Card>
 
-              {/* Day columns */}
-              {DAYS.map((day, dayIndex) => (
-                <div key={day} className="relative">
-                  <div className="h-8 flex items-center justify-center text-sm font-medium bg-muted rounded">
-                    {DAY_LABELS[dayIndex]}
-                  </div>
-                  
-                  <div className="relative" style={{ height: '960px' }}> {/* 24 hours * 40px */}
-                    {/* Hour grid lines */}
-                    {HOURS.map((_, hourIndex) => (
-                      <div
-                        key={hourIndex}
-                        className="absolute w-full border-t border-muted"
-                        style={{ top: hourIndex * 40 }}
-                      />
+          {/* Client Schedule Grid */}
+          <Card className="lg:col-span-4">
+            <CardHeader>
+              <CardTitle className="flex items-center justify-between">
+                <span>Client Schedule Grid</span>
+                <Badge variant="secondary">
+                  {getCurrentOption().matches?.length || 0} assignments
+                </Badge>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="text-left p-2 border-b font-medium min-w-[200px]">Client</th>
+                      {DAY_LABELS.map(day => (
+                        <th key={day} className="text-center p-2 border-b font-medium min-w-[120px]">
+                          {day}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {clients.map(client => (
+                      <tr key={client.id} className="border-b">
+                        <td className="p-2 font-medium">
+                          <div className="flex items-center gap-2">
+                            <User className="w-4 h-4 text-muted-foreground" />
+                            <div>
+                              <div className="font-medium">{client.name}</div>
+                              <div className="text-xs text-muted-foreground truncate">
+                                {client.address}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        {DAYS.map(day => (
+                          <td key={day} className="p-2 text-center">
+                            <div className="space-y-1">
+                              {/* Client's available time slots */}
+                              {getClientNeeds(client.id, day).map((slot, slotIndex) => (
+                                <div key={`need-${slotIndex}`} className="text-xs text-muted-foreground mb-1">
+                                  {formatTimeSlot(slot)}
+                                </div>
+                              ))}
+                              
+                              {/* Caregiver assignments */}
+                              {getMatchesForClient(client.id, day).map((match, matchIndex) => (
+                                <div
+                                  key={`match-${matchIndex}`}
+                                  className={`inline-block px-2 py-1 rounded text-xs font-medium ${getCaregiverColor(match.caregiverId)}`}
+                                  title={`${getCaregiverName(match.caregiverId)} - ${formatTimeSlot(match.timeSlot)}`}
+                                >
+                                  <div className="truncate max-w-[100px]">
+                                    {getCaregiverName(match.caregiverId)}
+                                  </div>
+                                  <div className="text-[10px] opacity-75">
+                                    {formatTimeSlot(match.timeSlot)}
+                                  </div>
+                                </div>
+                              ))}
+                              
+                              {/* Empty state */}
+                              {getClientNeeds(client.id, day).length === 0 && (
+                                <div className="text-xs text-muted-foreground">-</div>
+                              )}
+                            </div>
+                          </td>
+                        ))}
+                      </tr>
                     ))}
-
-                    {/* Caregiver availability blocks */}
-                    {caregivers.map(caregiver => 
-                      getCaregiverAvailability(caregiver.id, day).map((slot, slotIndex) => {
-                        const position = getTimeSlotPosition(slot);
-                        return (
-                          <div
-                            key={`caregiver-${caregiver.id}-${slotIndex}`}
-                            className="absolute bg-emerald-100 border border-emerald-300 rounded-sm p-1 text-xs text-emerald-800 font-medium z-10"
-                            style={{
-                              top: position.top,
-                              height: Math.max(position.height, 24),
-                              width: '45%',
-                              left: '2%',
-                            }}
-                          >
-                            <div className="truncate">{caregiver.name}</div>
-                            <div className="text-[10px] opacity-75">{slot.start}-{slot.end}</div>
-                          </div>
-                        );
-                      })
-                    )}
-
-                    {/* Client needs blocks */}
-                    {clients.map(client => 
-                      getClientNeeds(client.id, day).map((slot, slotIndex) => {
-                        const position = getTimeSlotPosition(slot);
-                        return (
-                          <div
-                            key={`client-${client.id}-${slotIndex}`}
-                            className="absolute bg-blue-100 border border-blue-300 rounded-sm p-1 text-xs text-blue-800 font-medium z-10"
-                            style={{
-                              top: position.top,
-                              height: Math.max(position.height, 24),
-                              width: '45%',
-                              right: '2%',
-                            }}
-                          >
-                            <div className="truncate">{client.name}</div>
-                            <div className="text-[10px] opacity-75">{slot.start}-{slot.end}</div>
-                          </div>
-                        );
-                      })
-                    )}
-
-                    {/* Matches (connections between caregiver and client) */}
-                    {getMatchesForDay(day).map((match, matchIndex) => {
-                      const position = getTimeSlotPosition(match.timeSlot);
-                      return (
-                        <div
-                          key={`match-${matchIndex}`}
-                          className="absolute w-full bg-primary text-primary-foreground text-xs p-1 rounded shadow-sm border border-primary z-20 opacity-90"
-                          style={{
-                            top: position.top,
-                            height: Math.max(position.height, 32),
-                          }}
-                        >
-                          <div className="flex items-center gap-1 mb-1">
-                            <User className="w-3 h-3" />
-                            <span className="font-medium truncate">
-                              {getCaregiverName(match.caregiverId)}
-                            </span>
-                          </div>
-                          <div className="text-xs opacity-90 truncate">
-                            → {getClientName(match.clientId)}
-                          </div>
-                          <div className="flex items-center gap-1 text-xs opacity-75">
-                            <Clock className="w-2 h-2" />
-                            <span>{match.timeSlot.start}-{match.timeSlot.end}</span>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Legend */}
-            <div className="mt-6 flex items-center gap-6 text-sm">
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-emerald-100 border border-emerald-300 rounded"></div>
-                <span>Caregiver Available</span>
+                  </tbody>
+                </table>
               </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-blue-100 border border-blue-300 rounded"></div>
-                <span>Client Needs Care</span>
-              </div>
-              <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-primary rounded"></div>
-                <span>Scheduled Match</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+            </CardContent>
+          </Card>
+        </div>
       )}
     </div>
   );
