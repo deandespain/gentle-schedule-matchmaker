@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -6,6 +5,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { CaregiverForm } from '@/components/CaregiverForm';
 import { ClientForm } from '@/components/ClientForm';
 import { ScheduleOptions } from '@/components/ScheduleOptions';
+import { SpreadsheetUpload } from '@/components/SpreadsheetUpload';
 import { Caregiver, Client, ScheduleOption } from '@/types/scheduler';
 import { findMatches, generateScheduleOptions } from '@/utils/scheduleMatcher';
 import { Users, UserCheck, Calendar, Sparkles } from 'lucide-react';
@@ -32,6 +32,14 @@ const Index = () => {
       title: "Client Added",
       description: `${client.name} has been added successfully.`,
     });
+  };
+
+  const handleCaregiversImport = (importedCaregivers: Caregiver[]) => {
+    setCaregivers(prev => [...prev, ...importedCaregivers]);
+  };
+
+  const handleClientsImport = (importedClients: Client[]) => {
+    setClients(prev => [...prev, ...importedClients]);
   };
 
   const generateSchedules = () => {
@@ -120,8 +128,9 @@ const Index = () => {
           </TabsList>
           
           <TabsContent value="caregivers" className="space-y-6">
-            <div className="flex justify-center">
+            <div className="flex justify-center gap-6">
               <CaregiverForm onSubmit={handleAddCaregiver} />
+              <SpreadsheetUpload type="caregivers" onDataImport={handleCaregiversImport} />
             </div>
             
             {caregivers.length > 0 && (
@@ -150,8 +159,9 @@ const Index = () => {
           </TabsContent>
           
           <TabsContent value="clients" className="space-y-6">
-            <div className="flex justify-center">
+            <div className="flex justify-center gap-6">
               <ClientForm onSubmit={handleAddClient} />
+              <SpreadsheetUpload type="clients" onDataImport={handleClientsImport} />
             </div>
             
             {clients.length > 0 && (
