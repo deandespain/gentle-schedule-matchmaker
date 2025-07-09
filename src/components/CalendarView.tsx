@@ -147,50 +147,60 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
                       />
                     ))}
 
-                    {/* Caregiver availability (background) */}
+                    {/* Caregiver availability blocks */}
                     {caregivers.map(caregiver => 
                       getCaregiverAvailability(caregiver.id, day).map((slot, slotIndex) => {
                         const position = getTimeSlotPosition(slot);
                         return (
                           <div
                             key={`caregiver-${caregiver.id}-${slotIndex}`}
-                            className="absolute w-full bg-green-100 border border-green-200 opacity-30"
+                            className="absolute bg-emerald-100 border border-emerald-300 rounded-sm p-1 text-xs text-emerald-800 font-medium z-10"
                             style={{
                               top: position.top,
-                              height: position.height,
+                              height: Math.max(position.height, 24),
+                              width: '45%',
+                              left: '2%',
                             }}
-                          />
+                          >
+                            <div className="truncate">{caregiver.name}</div>
+                            <div className="text-[10px] opacity-75">{slot.start}-{slot.end}</div>
+                          </div>
                         );
                       })
                     )}
 
-                    {/* Client needs (background) */}
+                    {/* Client needs blocks */}
                     {clients.map(client => 
                       getClientNeeds(client.id, day).map((slot, slotIndex) => {
                         const position = getTimeSlotPosition(slot);
                         return (
                           <div
                             key={`client-${client.id}-${slotIndex}`}
-                            className="absolute w-full bg-blue-100 border border-blue-200 opacity-30"
+                            className="absolute bg-blue-100 border border-blue-300 rounded-sm p-1 text-xs text-blue-800 font-medium z-10"
                             style={{
                               top: position.top,
-                              height: position.height,
+                              height: Math.max(position.height, 24),
+                              width: '45%',
+                              right: '2%',
                             }}
-                          />
+                          >
+                            <div className="truncate">{client.name}</div>
+                            <div className="text-[10px] opacity-75">{slot.start}-{slot.end}</div>
+                          </div>
                         );
                       })
                     )}
 
-                    {/* Matches (foreground) */}
+                    {/* Matches (connections between caregiver and client) */}
                     {getMatchesForDay(day).map((match, matchIndex) => {
                       const position = getTimeSlotPosition(match.timeSlot);
                       return (
                         <div
                           key={`match-${matchIndex}`}
-                          className="absolute w-full bg-primary text-primary-foreground text-xs p-1 rounded shadow-sm border border-primary z-10"
+                          className="absolute w-full bg-primary text-primary-foreground text-xs p-1 rounded shadow-sm border border-primary z-20 opacity-90"
                           style={{
                             top: position.top,
-                            height: Math.max(position.height, 32), // Minimum height for readability
+                            height: Math.max(position.height, 32),
                           }}
                         >
                           <div className="flex items-center gap-1 mb-1">
@@ -217,11 +227,11 @@ export const CalendarView: React.FC<CalendarViewProps> = ({
             {/* Legend */}
             <div className="mt-6 flex items-center gap-6 text-sm">
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-green-100 border border-green-200 rounded"></div>
+                <div className="w-4 h-4 bg-emerald-100 border border-emerald-300 rounded"></div>
                 <span>Caregiver Available</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-4 h-4 bg-blue-100 border border-blue-200 rounded"></div>
+                <div className="w-4 h-4 bg-blue-100 border border-blue-300 rounded"></div>
                 <span>Client Needs Care</span>
               </div>
               <div className="flex items-center gap-2">
