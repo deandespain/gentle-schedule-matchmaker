@@ -1,48 +1,29 @@
-
-import React, { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { Layout } from '@/components/Layout';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { CaregiverForm } from '@/components/CaregiverForm';
-import { ClientForm } from '@/components/ClientForm';
-import { ScheduleOptions } from '@/components/ScheduleOptions';
-import { SpreadsheetUpload } from '@/components/SpreadsheetUpload';
-import { CalendarView } from '@/components/CalendarView';
 import { Caregiver, Client, ScheduleOption } from '@/types/scheduler';
 import { findMatches, generateScheduleOptions } from '@/utils/scheduleMatcher';
-import { Users, UserCheck, Calendar, Sparkles } from 'lucide-react';
+import { Users, UserCheck, Calendar, Sparkles, ArrowRight, Clock } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { Link } from "wouter";
 
 const Index = () => {
   const [caregivers, setCaregivers] = useState<Caregiver[]>([]);
   const [clients, setClients] = useState<Client[]>([]);
   const [scheduleOptions, setScheduleOptions] = useState<ScheduleOption[]>([]);
-  const [activeTab, setActiveTab] = useState('caregivers');
   const { toast } = useToast();
 
-  const handleAddCaregiver = (caregiver: Caregiver) => {
-    setCaregivers(prev => [...prev, caregiver]);
-    toast({
-      title: "Caregiver Added",
-      description: `${caregiver.name} has been added successfully.`,
-    });
-  };
-
-  const handleAddClient = (client: Client) => {
-    setClients(prev => [...prev, client]);
-    toast({
-      title: "Client Added",
-      description: `${client.name} has been added successfully.`,
-    });
-  };
-
-  const handleCaregiversImport = (importedCaregivers: Caregiver[]) => {
-    setCaregivers(prev => [...prev, ...importedCaregivers]);
-  };
-
-  const handleClientsImport = (importedClients: Client[]) => {
-    setClients(prev => [...prev, ...importedClients]);
-  };
+  // Load data from localStorage on mount
+  useEffect(() => {
+    const storedCaregivers = localStorage.getItem('caregivers');
+    const storedClients = localStorage.getItem('clients');
+    const storedScheduleOptions = localStorage.getItem('scheduleOptions');
+    
+    if (storedCaregivers) setCaregivers(JSON.parse(storedCaregivers));
+    if (storedClients) setClients(JSON.parse(storedClients));
+    if (storedScheduleOptions) setScheduleOptions(JSON.parse(storedScheduleOptions));
+  }, []);
 
   const generateSchedules = () => {
     if (caregivers.length === 0 || clients.length === 0) {
@@ -57,7 +38,7 @@ const Index = () => {
     const matches = findMatches(caregivers, clients);
     const options = generateScheduleOptions(matches);
     setScheduleOptions(options);
-    setActiveTab('schedule');
+    localStorage.setItem('scheduleOptions', JSON.stringify(options));
     
     toast({
       title: "Schedules Generated",
@@ -65,19 +46,23 @@ const Index = () => {
     });
   };
 
+  const totalMatches = scheduleOptions.reduce((total, option) => total + option.matches.length, 0);
+  const bestEfficiency = scheduleOptions.length > 0 ? Math.max(...scheduleOptions.map(o => o.efficiency)) : 0;
+
   return (
-    <div className="min-h-screen bg-background">
-      <div className="container mx-auto py-8 px-4">
-        <div className="text-center mb-8">
+    <Layout>
+      <div className="space-y-6">
+        <div className="text-center">
           <h1 className="text-4xl font-bold mb-4 text-foreground">
-            Care Schedule Matchmaker
+            Care Schedule Dashboard
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
             Efficiently match caregivers with clients based on schedules, locations, and preferences
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
           <Card>
             <CardContent className="flex items-center p-6">
               <Users className="h-8 w-8 text-primary mr-3" />
@@ -103,132 +88,140 @@ const Index = () => {
               <Calendar className="h-8 w-8 text-primary mr-3" />
               <div>
                 <p className="text-2xl font-bold">{scheduleOptions.length}</p>
-                <p className="text-sm text-muted-foreground">Options</p>
+                <p className="text-sm text-muted-foreground">Schedule Options</p>
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="p-6">
-              <Button 
-                onClick={generateSchedules} 
-                className="w-full"
-                disabled={caregivers.length === 0 || clients.length === 0}
-              >
-                <Sparkles className="w-4 h-4 mr-2" />
-                Generate Schedules
-              </Button>
+            <CardContent className="flex items-center p-6">
+              <Clock className="h-8 w-8 text-primary mr-3" />
+              <div>
+                <p className="text-2xl font-bold">{totalMatches}</p>
+                <p className="text-sm text-muted-foreground">Total Matches</p>
+              </div>
             </CardContent>
           </Card>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-          <TabsList className="grid w-full grid-cols-4">
-            <TabsTrigger value="caregivers">Caregivers</TabsTrigger>
-            <TabsTrigger value="clients">Clients</TabsTrigger>
-            <TabsTrigger value="schedule">Schedule Options</TabsTrigger>
-            <TabsTrigger value="calendar">Calendar View</TabsTrigger>
-          </TabsList>
-          
-          <TabsContent value="caregivers" className="space-y-6">
-            <div className="flex justify-center gap-6">
-              <CaregiverForm onSubmit={handleAddCaregiver} />
-              <SpreadsheetUpload type="caregivers" onDataImport={handleCaregiversImport} />
-            </div>
-            
-            {caregivers.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="text-xl font-semibold">Added Caregivers</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {caregivers.map((caregiver) => (
-                    <Card key={caregiver.id}>
-                      <CardHeader>
-                        <CardTitle className="text-lg">{caregiver.name}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2 text-sm">
-                          <p><strong>Address:</strong> {caregiver.address}</p>
-                          <p><strong>Phone:</strong> {caregiver.phone}</p>
-                          <p><strong>Available Days:</strong> {
-                            caregiver.weeklySchedule.filter(day => day.slots.length > 0).length
-                          }</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="clients" className="space-y-6">
-            <div className="flex justify-center gap-6">
-              <ClientForm onSubmit={handleAddClient} />
-              <SpreadsheetUpload type="clients" onDataImport={handleClientsImport} />
-            </div>
-            
-            {clients.length > 0 && (
-              <div className="space-y-4">
-                <h3 className="text-xl font-semibold">Added Clients</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {clients.map((client) => (
-                    <Card key={client.id}>
-                      <CardHeader>
-                        <CardTitle className="text-lg">{client.name}</CardTitle>
-                      </CardHeader>
-                      <CardContent>
-                        <div className="space-y-2 text-sm">
-                          <p><strong>Address:</strong> {client.address}</p>
-                          <p><strong>Phone:</strong> {client.phone}</p>
-                          <p><strong>Care Needed:</strong> {
-                            client.weeklySchedule.filter(day => day.slots.length > 0).length
-                          } days</p>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </div>
-            )}
-          </TabsContent>
-          
-          <TabsContent value="schedule" className="space-y-6">
-            {scheduleOptions.length > 0 ? (
-              <ScheduleOptions 
-                options={scheduleOptions} 
-                caregivers={caregivers} 
-                clients={clients} 
-              />
-            ) : (
-              <Card>
-                <CardContent className="text-center py-12">
-                  <Calendar className="w-16 h-16 mx-auto text-muted-foreground mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">No Schedules Generated Yet</h3>
-                  <p className="text-muted-foreground mb-6">
-                    Add caregivers and clients, then click "Generate Schedules" to see matching options.
-                  </p>
-                  <Button 
-                    onClick={generateSchedules}
-                    disabled={caregivers.length === 0 || clients.length === 0}
-                  >
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Generate Schedules
-                  </Button>
-                </CardContent>
-              </Card>
-            )}
-          </TabsContent>
+        {/* Action Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Users className="w-5 h-5 mr-2" />
+                Manage Caregivers
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">
+                Add caregiver information, schedules, and preferences
+              </p>
+              <Link href="/caregivers">
+                <Button className="w-full">
+                  Go to Caregivers
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
 
-          <TabsContent value="calendar" className="space-y-6">
-            <CalendarView 
-              scheduleOptions={scheduleOptions}
-              caregivers={caregivers}
-              clients={clients}
-            />
-          </TabsContent>
-        </Tabs>
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <UserCheck className="w-5 h-5 mr-2" />
+                Manage Clients
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-muted-foreground mb-4">
+                Add client information and care requirements
+              </p>
+              <Link href="/clients">
+                <Button className="w-full">
+                  Go to Clients
+                  <ArrowRight className="w-4 h-4 ml-2" />
+                </Button>
+              </Link>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Generate Schedules Section */}
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center justify-between">
+              <span className="flex items-center">
+                <Sparkles className="w-5 h-5 mr-2" />
+                Schedule Generation
+              </span>
+              {bestEfficiency > 0 && (
+                <span className="text-sm text-muted-foreground">
+                  Best efficiency: {bestEfficiency.toFixed(1)}%
+                </span>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between">
+              <div>
+                <p className="text-muted-foreground">
+                  Generate optimal scheduling options based on your caregivers and clients
+                </p>
+                {scheduleOptions.length > 0 && (
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Last generated: {scheduleOptions.length} options with {totalMatches} matches
+                  </p>
+                )}
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  onClick={generateSchedules} 
+                  disabled={caregivers.length === 0 || clients.length === 0}
+                  size="lg"
+                >
+                  <Sparkles className="w-4 h-4 mr-2" />
+                  Generate Schedules
+                </Button>
+                {scheduleOptions.length > 0 && (
+                  <Link href="/schedule">
+                    <Button variant="outline" size="lg">
+                      View Options
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Quick Access */}
+        {scheduleOptions.length > 0 && (
+          <Card>
+            <CardHeader>
+              <CardTitle>Quick Access</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Link href="/schedule">
+                  <Button variant="outline" className="w-full justify-start">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    View Schedule Options
+                  </Button>
+                </Link>
+                <Link href="/calendar">
+                  <Button variant="outline" className="w-full justify-start">
+                    <Calendar className="w-4 h-4 mr-2" />
+                    Calendar View
+                  </Button>
+                </Link>
+              </div>
+            </CardContent>
+          </Card>
+        )}
       </div>
-    </div>
+    </Layout>
   );
 };
 

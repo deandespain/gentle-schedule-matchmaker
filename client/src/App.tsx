@@ -4,6 +4,10 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Router, Route, Switch } from "wouter";
 import Index from "./pages/Index";
+import Caregivers from "./pages/Caregivers";
+import Clients from "./pages/Clients";
+import ScheduleOptions from "./pages/ScheduleOptions";
+import CalendarView from "./pages/CalendarView";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -16,6 +20,10 @@ const App = () => (
       <Router>
         <Switch>
           <Route path="/" component={Index} />
+          <Route path="/caregivers" component={Caregivers} />
+          <Route path="/clients" component={Clients} />
+          <Route path="/schedule" component={ScheduleOptions} />
+          <Route path="/calendar" component={CalendarView} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route component={NotFound} />
         </Switch>
