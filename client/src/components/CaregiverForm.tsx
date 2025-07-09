@@ -4,17 +4,21 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Caregiver, DaySchedule, TimeSlot } from '@/types/scheduler';
-import { Plus, Trash2 } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Badge } from '@/components/ui/badge';
+import { Caregiver, Client, DaySchedule, TimeSlot } from '@/types/scheduler';
+import { Plus, Trash2, X } from 'lucide-react';
 
 interface CaregiverFormProps {
   onSubmit: (caregiver: Caregiver) => void;
   caregiver?: Caregiver;
+  clients?: Client[];
+  onCancel?: () => void;
 }
 
 const DAYS = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
 
-export const CaregiverForm: React.FC<CaregiverFormProps> = ({ onSubmit, caregiver }) => {
+export const CaregiverForm: React.FC<CaregiverFormProps> = ({ onSubmit, caregiver, clients = [], onCancel }) => {
   const [formData, setFormData] = useState<Partial<Caregiver>>(
     caregiver || {
       name: '',
@@ -24,6 +28,8 @@ export const CaregiverForm: React.FC<CaregiverFormProps> = ({ onSubmit, caregive
       exclusions: []
     }
   );
+
+  const [selectedClient, setSelectedClient] = useState<string>('');
 
   const addTimeSlot = (dayIndex: number) => {
     const newSchedule = [...(formData.weeklySchedule || [])];
@@ -41,6 +47,27 @@ export const CaregiverForm: React.FC<CaregiverFormProps> = ({ onSubmit, caregive
     const newSchedule = [...(formData.weeklySchedule || [])];
     newSchedule[dayIndex].slots[slotIndex][field] = value;
     setFormData({ ...formData, weeklySchedule: newSchedule });
+  };
+
+  const addExclusion = () => {
+    if (selectedClient && !formData.exclusions?.includes(selectedClient)) {
+      setFormData({
+        ...formData,
+        exclusions: [...(formData.exclusions || []), selectedClient]
+      });
+      setSelectedClient('');
+    }
+  };
+
+  const removeExclusion = (clientId: string) => {
+    setFormData({
+      ...formData,
+      exclusions: (formData.exclusions || []).filter(id => id !== clientId)
+    });
+  };
+
+  const getClientName = (clientId: string) => {
+    return clients.find(c => c.id === clientId)?.name || 'Unknown Client';
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -143,9 +170,68 @@ export const CaregiverForm: React.FC<CaregiverFormProps> = ({ onSubmit, caregive
             </div>
           </div>
 
-          <Button type="submit" className="w-full">
-            {caregiver ? 'Update' : 'Add'} Caregiver
-          </Button>
+          {/* Exclusions Section */}
+          <div>
+            <Label className="text-lg font-semibold">Client Exclusions</Label>
+            <p className="text-sm text-muted-foreground mb-4">
+              Select clients this caregiver cannot work with
+            </p>
+            
+            <div className="space-y-4">
+              <div className="flex gap-2">
+                <Select value={selectedClient} onValueChange={setSelectedClient}>
+                  <SelectTrigger className="flex-1">
+                    <SelectValue placeholder="Select a client to exclude" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {clients
+                      .filter(client => !formData.exclusions?.includes(client.id))
+                      .map(client => (
+                        <SelectItem key={client.id} value={client.id}>
+                          {client.name} - {client.address}
+                        </SelectItem>
+                      ))}
+                  </SelectContent>
+                </Select>
+                <Button 
+                  type="button" 
+                  onClick={addExclusion}
+                  disabled={!selectedClient}
+                  size="sm"
+                >
+                  <Plus className="w-4 h-4" />
+                </Button>
+              </div>
+
+              {formData.exclusions && formData.exclusions.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {formData.exclusions.map(clientId => (
+                    <Badge key={clientId} variant="secondary" className="flex items-center gap-1">
+                      {getClientName(clientId)}
+                      <button
+                        type="button"
+                        onClick={() => removeExclusion(clientId)}
+                        className="ml-1 hover:text-destructive"
+                      >
+                        <X className="w-3 h-3" />
+                      </button>
+                    </Badge>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="flex justify-end gap-2">
+            {onCancel && (
+              <Button type="button" variant="outline" onClick={onCancel}>
+                Cancel
+              </Button>
+            )}
+            <Button type="submit">
+              {caregiver ? 'Update' : 'Add'} Caregiver
+            </Button>
+          </div>
         </form>
       </CardContent>
     </Card>
