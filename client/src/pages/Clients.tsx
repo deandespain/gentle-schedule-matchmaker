@@ -7,7 +7,8 @@ import { ClientForm } from '@/components/ClientForm';
 import { SpreadsheetUpload } from '@/components/SpreadsheetUpload';
 import { Client, Caregiver } from '@/types/scheduler';
 import { useToast } from '@/hooks/use-toast';
-import { Plus, Pencil, Trash2, UserPlus } from 'lucide-react';
+import { Plus, Pencil, Trash2, UserPlus, Shuffle } from 'lucide-react';
+import { generateSampleClients } from '@/utils/sampleDataGenerator';
 
 const Clients = () => {
   const [clients, setClients] = useState<Client[]>([]);
@@ -74,6 +75,15 @@ const Clients = () => {
     });
   };
 
+  const handleGenerateSampleData = () => {
+    const sampleClients = generateSampleClients(6);
+    setClients(sampleClients);
+    toast({
+      title: "Sample Data Generated",
+      description: `${sampleClients.length} sample clients have been created with care needs.`,
+    });
+  };
+
   return (
     <Layout>
       <div className="space-y-6">
@@ -124,6 +134,16 @@ const Clients = () => {
           </Dialog>
 
           <SpreadsheetUpload type="clients" onDataImport={handleClientsImport} />
+
+          <Button 
+            variant="outline" 
+            size="lg" 
+            onClick={handleGenerateSampleData}
+            className="flex items-center gap-2"
+          >
+            <Shuffle className="w-5 h-5" />
+            Generate Sample Data
+          </Button>
         </div>
         
         {clients.length > 0 && (

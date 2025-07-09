@@ -9,6 +9,8 @@ export interface DaySchedule {
   slots: TimeSlot[];
 }
 
+export type ShiftType = 'part-time' | 'mid-time' | 'anytime';
+
 export interface Caregiver {
   id: string;
   name: string;
@@ -16,6 +18,7 @@ export interface Caregiver {
   phone: string;
   weeklySchedule: DaySchedule[];
   exclusions: string[]; // Client IDs they can't work with
+  shiftType: ShiftType; // part-time (2hrs max), mid-time (4hrs max), anytime (full days)
 }
 
 export interface Client {

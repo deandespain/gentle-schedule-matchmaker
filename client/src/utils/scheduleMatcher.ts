@@ -1,5 +1,5 @@
 
-import { Caregiver, Client, Match, ScheduleOption, TimeSlot } from '@/types/scheduler';
+import { Caregiver, Client, Match, ScheduleOption, TimeSlot, ShiftType } from '@/types/scheduler';
 
 // Calculate distance between two addresses (simplified - in real app would use Google Maps API)
 function calculateDistance(address1: string, address2: string): number {
@@ -30,6 +30,46 @@ function calculateOverlapDuration(slot1: TimeSlot, slot2: TimeSlot): number {
   const overlapEnd = new Date(Math.min(end1.getTime(), end2.getTime()));
 
   return (overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60); // minutes
+}
+
+// Get maximum shift duration based on shift type
+function getMaxShiftDuration(shiftType: ShiftType): number {
+  switch (shiftType) {
+    case 'part-time': return 120; // 2 hours in minutes
+    case 'mid-time': return 240;  // 4 hours in minutes
+    case 'anytime': return 480;   // 8 hours in minutes (full day)
+    default: return 120;
+  }
+}
+
+// Create optimal time slot respecting shift type constraints
+function createOptimalTimeSlot(clientSlot: TimeSlot, caregiverSlot: TimeSlot, shiftType: ShiftType): TimeSlot {
+  const maxDuration = getMaxShiftDuration(shiftType);
+  const clientStart = new Date(`2000-01-01T${clientSlot.start}`);
+  const clientEnd = new Date(`2000-01-01T${clientSlot.end}`);
+  const caregiverStart = new Date(`2000-01-01T${caregiverSlot.start}`);
+  const caregiverEnd = new Date(`2000-01-01T${caregiverSlot.end}`);
+
+  // Find the overlap period
+  const overlapStart = new Date(Math.max(clientStart.getTime(), caregiverStart.getTime()));
+  const overlapEnd = new Date(Math.min(clientEnd.getTime(), caregiverEnd.getTime()));
+  
+  const overlapDuration = (overlapEnd.getTime() - overlapStart.getTime()) / (1000 * 60);
+  
+  if (overlapDuration <= maxDuration) {
+    // If overlap fits within shift type constraint, use the full overlap
+    return {
+      start: overlapStart.toISOString().slice(11, 16),
+      end: overlapEnd.toISOString().slice(11, 16)
+    };
+  } else {
+    // If overlap is too long, limit to max duration starting from client's preferred start time
+    const limitedEnd = new Date(overlapStart.getTime() + maxDuration * 60 * 1000);
+    return {
+      start: overlapStart.toISOString().slice(11, 16),
+      end: limitedEnd.toISOString().slice(11, 16)
+    };
+  }
 }
 
 // Check if a client slot is fully covered by a caregiver slot
@@ -66,27 +106,41 @@ export function findMatches(caregivers: Caregiver[], clients: Client[]): Match[]
               const overlapDuration = calculateOverlapDuration(caregiverSlot, clientSlot);
               const isFullyCovered = isClientSlotFullyCovered(clientSlot, caregiverSlot);
               
-              // Calculate score prioritizing full coverage of client needs
-              let score = overlapDuration * (1 / (distance + 1));
+              // Create optimal time slot respecting shift type constraints
+              const optimalTimeSlot = createOptimalTimeSlot(clientSlot, caregiverSlot, caregiver.shiftType);
+              const clientSlotStart = new Date(`2000-01-01T${clientSlot.start}`);
+              const clientSlotEnd = new Date(`2000-01-01T${clientSlot.end}`);
+              const clientSlotDuration = (clientSlotEnd.getTime() - clientSlotStart.getTime()) / (1000 * 60);
+              
+              const optimalSlotStart = new Date(`2000-01-01T${optimalTimeSlot.start}`);
+              const optimalSlotEnd = new Date(`2000-01-01T${optimalTimeSlot.end}`);
+              const assignedDuration = (optimalSlotEnd.getTime() - optimalSlotStart.getTime()) / (1000 * 60);
+              
+              // Calculate score prioritizing full coverage of client needs and respecting shift types
+              let score = assignedDuration * (1 / (distance + 1));
               
               // Bonus for full coverage of client slot
-              if (isFullyCovered) {
+              if (isFullyCovered && assignedDuration >= clientSlotDuration) {
                 score *= 2; // Double the score for full coverage
+              }
+              
+              // Bonus for respecting shift type preferences (shorter shifts get higher scores)
+              if (caregiver.shiftType === 'part-time') {
+                score *= 1.3; // Prioritize part-time workers for shorter shifts
+              } else if (caregiver.shiftType === 'mid-time') {
+                score *= 1.1;
               }
               
               // Additional bonus for exact time match
               if (caregiverSlot.start === clientSlot.start && caregiverSlot.end === clientSlot.end) {
-                score *= 1.5;
+                score *= 1.2;
               }
 
               matches.push({
                 caregiverId: caregiver.id,
                 clientId: client.id,
                 day: clientDay.day,
-                timeSlot: {
-                  start: clientSlot.start,
-                  end: clientSlot.end
-                },
+                timeSlot: optimalTimeSlot,
                 score
               });
             }

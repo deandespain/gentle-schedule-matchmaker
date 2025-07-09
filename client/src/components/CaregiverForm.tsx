@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Badge } from '@/components/ui/badge';
-import { Caregiver, Client, DaySchedule, TimeSlot } from '@/types/scheduler';
+import { Caregiver, Client, DaySchedule, TimeSlot, ShiftType } from '@/types/scheduler';
 import { Plus, Trash2, X } from 'lucide-react';
 
 interface CaregiverFormProps {
@@ -25,7 +25,8 @@ export const CaregiverForm: React.FC<CaregiverFormProps> = ({ onSubmit, caregive
       address: '',
       phone: '',
       weeklySchedule: DAYS.map(day => ({ day: day as any, slots: [] })),
-      exclusions: []
+      exclusions: [],
+      shiftType: 'part-time'
     }
   );
 
@@ -79,7 +80,8 @@ export const CaregiverForm: React.FC<CaregiverFormProps> = ({ onSubmit, caregive
         address: formData.address,
         phone: formData.phone,
         weeklySchedule: formData.weeklySchedule || [],
-        exclusions: formData.exclusions || []
+        exclusions: formData.exclusions || [],
+        shiftType: formData.shiftType || 'part-time'
       });
     }
   };
@@ -91,7 +93,7 @@ export const CaregiverForm: React.FC<CaregiverFormProps> = ({ onSubmit, caregive
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div>
               <Label htmlFor="name">Name</Label>
               <Input
@@ -118,6 +120,22 @@ export const CaregiverForm: React.FC<CaregiverFormProps> = ({ onSubmit, caregive
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 required
               />
+            </div>
+            <div>
+              <Label htmlFor="shiftType">Shift Type</Label>
+              <Select 
+                value={formData.shiftType || 'part-time'} 
+                onValueChange={(value: ShiftType) => setFormData({ ...formData, shiftType: value })}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select shift type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="part-time">Part-time (2 hours max)</SelectItem>
+                  <SelectItem value="mid-time">Mid-time (4 hours max)</SelectItem>
+                  <SelectItem value="anytime">Anytime (full days)</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </div>
 
